@@ -1,0 +1,35 @@
+builds:
+- env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm
+    - arm64
+dockers:
+- image_templates:
+    - 'saracen/lfscache:{{ .Tag }}'
+    - 'saracen/lfscache:v{{ .Major }}.{{ .Minor }}'
+    - 'saracen/lfscache:latest'
+archive:
+  format_overrides:
+  - goos: windows
+    format: zip
+  files:
+    - LICENSE
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - Merge pull request
+    - Merge branch
+

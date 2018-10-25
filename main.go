@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,14 +14,26 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	var (
 		httpAddr     = flag.String("http-addr", ":8080", "HTTP listen address")
-		lfsServerUrl = flag.String("url", "", "LFS server URL")
+		lfsServerURL = flag.String("url", "", "LFS server URL")
 		directory    = flag.String("directory", "./objects", "cache directory")
+		printVersion = flag.Bool("v", false, "print version")
 	)
 
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Printf("%v, commit %v, built at %v\n", version, commit, date)
+		os.Exit(0)
+	}
 
 	var logger log.Logger
 	{
@@ -29,7 +42,7 @@ func main() {
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	}
 
-	addr, err := url.Parse(*lfsServerUrl)
+	addr, err := url.Parse(*lfsServerURL)
 	if err == nil && (addr.Scheme != "http" && addr.Scheme != "https") {
 		err = errors.New("unsupported LFS server URL")
 	}

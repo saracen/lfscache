@@ -199,7 +199,10 @@ func (s *Server) batch() *httputil.ReverseProxy {
 
 		// modify batch request urls
 		for _, object := range br.Objects {
-			for _, action := range object.Actions {
+			for operation, action := range object.Actions {
+				if operation != "download" {
+					continue
+				}
 				if action.Header == nil {
 					action.Header = make(map[string]string)
 				}
@@ -377,7 +380,7 @@ func (s *Server) fetch(w io.Writer, oid, url string, size int, header http.Heade
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("upstream server responsed with %d status", resp.StatusCode)
+		return fmt.Errorf("upstream server responded with %d status", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()

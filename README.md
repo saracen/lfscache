@@ -1,5 +1,7 @@
 # lfs-cache
 
+[![Join the chat at https://gitter.im/lfscache/community](https://badges.gitter.im/lfscache/community.svg)](https://gitter.im/lfscache/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 lfs-cache is a caching proxy for [Git LFS](https://git-lfs.github.com/) servers.
 
 ## Usage

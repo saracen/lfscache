@@ -91,11 +91,24 @@ type Server struct {
 	hmacKey  [64]byte
 }
 
-// New returns a new LFS caching server.
+// New returns a new LFS proxy caching server.
 func New(logger log.Logger, upstream, directory string) (*Server, error) {
-	fs, err := cache.NewFilesystemCache(directory)
-	if err != nil {
-		return nil, err
+	return newServer(logger, upstream, directory, true)
+}
+
+// NewNoCache returns a new LFS proxy server, with no caching.
+func NewNoCache(logger log.Logger, upstream string) (*Server, error) {
+	return newServer(logger, upstream, "", false)
+}
+
+func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool) (*Server, error) {
+	var fs *cache.FilesystemCache
+	var err error
+	if cacheEnabled {
+		fs, err = cache.NewFilesystemCache(directory)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	s := &Server{
@@ -129,7 +142,11 @@ func New(logger log.Logger, upstream, directory string) (*Server, error) {
 	}
 
 	s.mux = http.NewServeMux()
-	s.mux.HandleFunc(ContentCachePathPrefix, s.serve)
+	if s.cache != nil {
+		s.mux.HandleFunc(ContentCachePathPrefix, s.serve)
+	} else {
+		s.mux.Handle(ContentCachePathPrefix, s.nocache())
+	}
 	s.mux.Handle("/objects/batch", s.batch())
 	s.mux.Handle("/", s.proxy())
 
@@ -272,6 +289,29 @@ func (s *Server) batchResponse(br *BatchResponse, compress bool, r *http.Respons
 	r.Header.Set("Content-Length", strconv.Itoa(buf.Len()))
 
 	return nil
+}
+
+func (s *Server) nocache() *httputil.ReverseProxy {
+	director := func(req *http.Request) {
+		addr, _, header, err := s.parseHeaders(req)
+		if err != nil {
+			return
+		}
+
+		originalURL, err := url.Parse(addr)
+		if err != nil {
+			return
+		}
+
+		req.URL = originalURL
+		req.Header = header
+	}
+
+	errorHandler := func(w http.ResponseWriter, r *http.Request, err error) {
+		level.Error(s.logger).Log("event", "proxying-no-cache", "request", r.URL, "err", err)
+	}
+
+	return &httputil.ReverseProxy{Director: director, ErrorHandler: errorHandler}
 }
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {

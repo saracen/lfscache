@@ -81,6 +81,10 @@ type originalHost struct {
 	host string
 }
 
+func DefaultObjectBatchActionURLRewriter(href *url.URL) *url.URL {
+	return href
+}
+
 // Server is a LFS caching server.
 type Server struct {
 	logger   log.Logger
@@ -89,6 +93,8 @@ type Server struct {
 	cache    *cache.FilesystemCache
 	client   *http.Client
 	hmacKey  [64]byte
+
+	ObjectBatchActionURLRewriter func(href *url.URL) *url.URL
 }
 
 // New returns a new LFS proxy caching server.
@@ -125,6 +131,7 @@ func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool)
 				ExpectContinueTimeout: 1 * time.Second,
 			},
 		},
+		ObjectBatchActionURLRewriter: DefaultObjectBatchActionURLRewriter,
 	}
 
 	_, err = rand.Read(s.hmacKey[:])
@@ -217,7 +224,7 @@ func (s *Server) batch() *httputil.ReverseProxy {
 		// modify batch request urls
 		for _, object := range br.Objects {
 			for operation, action := range object.Actions {
-				if operation != "download" {
+				if operation != "download" && s.cache != nil {
 					continue
 				}
 				if action.Header == nil {
@@ -242,7 +249,7 @@ func (s *Server) batch() *httputil.ReverseProxy {
 				action.Header[UpstreamHeaderList] = strings.Join(list, ";")
 				action.Header[OriginalHrefHeader] = action.Href
 				action.Header[SizeHeader] = strconv.Itoa(int(object.Size))
-				action.Href = (&url.URL{
+				action.Href = s.ObjectBatchActionURLRewriter(&url.URL{
 					Scheme: scheme,
 					Host:   host.host,
 					Path:   ContentCachePathPrefix + object.OID,
@@ -303,6 +310,7 @@ func (s *Server) nocache() *httputil.ReverseProxy {
 			return
 		}
 
+		req.Host = originalURL.Host
 		req.URL = originalURL
 		req.Header = header
 	}

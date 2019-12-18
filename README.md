@@ -23,10 +23,13 @@ Git LFS client, so it might be a good idea to copy over your `.git/lfs/objects`
 directory to preload the cache (`cp -r .git/lfs/objects /my/cache/dir/lfs`).
 The `tmp` and `incomplete` directories do not need to be copied over.
 
-Now you need to have your Git LFS client point to the proxy. One method of
-doing this is to replace the URL at a global level, so that it works whenever
-a repository references your target LFS server.
-
+Now you need to have your Git LFS client point to the proxy. There are several
+ways to do this. The easiest method is changing the lfs url that will be used
+in your local git config:
 ```
-git config --global url.http://my-cache-proxy:9876/.insteadOf https://github.com/org/repo.git/info/lfs
+# note that repo.git/info/lfs is not required
+git config lfs.url http://localhost:9876/
+
+# you can confirm the Endpoint that will be used by running
+git lfs env | grep Endpoint
 ```

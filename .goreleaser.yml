@@ -14,8 +14,8 @@ dockers:
     - 'saracen/lfscache:{{ .Tag }}'
     - 'saracen/lfscache:v{{ .Major }}.{{ .Minor }}'
     - 'saracen/lfscache:latest'
-archive:
-  format_overrides:
+archives:
+- format_overrides:
   - goos: windows
     format: zip
   files:

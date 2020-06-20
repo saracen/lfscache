@@ -126,6 +126,7 @@ func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool)
 					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
 				}).Dial,
+				ForceAttemptHTTP2:     true,
 				TLSHandshakeTimeout:   10 * time.Second,
 				ResponseHeaderTimeout: 10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,

@@ -22,12 +22,12 @@ func server() (*httptest.Server, *Server, string, error) {
 			response := BatchResponse{
 				Transfer: "basic",
 				Objects: []*BatchObjectResponse{
-					&BatchObjectResponse{
+					{
 						OID:           "1111111",
 						Size:          123,
 						Authenticated: true,
 						Actions: map[string]*BatchObjectActionResponse{
-							"download": &BatchObjectActionResponse{
+							"download": {
 								Href: ts.URL + "/download",
 							},
 						},

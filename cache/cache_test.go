@@ -13,7 +13,7 @@ import (
 func TestCache(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
-	//defer os.RemoveAll(dir)
+	defer os.RemoveAll(dir)
 
 	c, err := NewFilesystemCache(dir)
 	require.NoError(t, err)

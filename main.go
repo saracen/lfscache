@@ -4,9 +4,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 
 	"github.com/saracen/lfscache/server"
 
@@ -23,6 +25,9 @@ var (
 func main() {
 	var (
 		httpAddr     = flag.String("http-addr", ":8080", "HTTP listen address")
+		httpsAddr    = flag.String("https-addr", ":8443", "HTTPS listen address (only enabled if key/cert options are provided)")
+		tlsKey       = flag.String("tls-key", "", "HTTPS TLS key filepath")
+		tlsCert      = flag.String("tls-cert", "", "HTTPS TLS certificate filepath")
 		lfsServerURL = flag.String("url", "", "LFS server URL")
 		directory    = flag.String("directory", "./objects", "cache directory")
 		printVersion = flag.Bool("v", false, "print version")
@@ -56,6 +61,50 @@ func main() {
 		panic(err)
 	}
 
-	level.Info(logger).Log("event", "listening", "proxy-endpoint", addr.String(), "transport", "HTTP", "addr", *httpAddr)
-	panic(http.ListenAndServe(*httpAddr, s.Handle()))
+	switch {
+	case *tlsKey != "" && *tlsCert == "":
+		*tlsCert = *tlsKey
+	case *tlsKey == "" && *tlsCert != "":
+		*tlsKey = *tlsCert
+	}
+
+	httpsEnabled := *httpsAddr != "" && *tlsKey != ""
+
+	var wg sync.WaitGroup
+	if *httpAddr != "" {
+		level.Info(logger).Log("event", "listening", "proxy-endpoint", addr.String(), "transport", "HTTP", "addr", *httpAddr)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if httpsEnabled {
+				http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+					host, _, _ := net.SplitHostPort(r.Host)
+					_, port, _ := net.SplitHostPort(*httpsAddr)
+
+					url := r.URL
+					url.Scheme = "https"
+					url.Host = host + ":" + port
+
+					http.Redirect(w, r, url.String(), http.StatusMovedPermanently)
+				})
+				panic(http.ListenAndServe(*httpAddr, nil))
+			} else {
+				panic(http.ListenAndServe(*httpAddr, s.Handle()))
+			}
+		}()
+	}
+
+	if httpsEnabled {
+		level.Info(logger).Log("event", "listening", "proxy-endpoint", addr.String(), "transport", "HTTPS", "addr", *httpsAddr)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			panic(http.ListenAndServeTLS(*httpsAddr, *tlsCert, *tlsKey, s.Handle()))
+		}()
+	}
+
+	wg.Wait()
 }

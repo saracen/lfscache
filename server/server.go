@@ -14,6 +14,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -23,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/git-lfs/git-lfs/tools/humanize"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/saracen/lfscache/cache"
@@ -344,7 +344,7 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			level.Error(logger).Log("err", err)
 		} else {
-			rate := humanize.FormatByteRate(uint64(size), time.Since(begin))
+			rate := formatByteRate(uint64(size), time.Since(begin))
 
 			level.Info(logger).Log("size", size, "rate", rate)
 		}
@@ -402,7 +402,7 @@ func (s *Server) fetch(w io.Writer, oid, url string, size int, header http.Heade
 	begin := time.Now()
 	var beginTransfer time.Time
 	defer func() {
-		rate := humanize.FormatByteRate(uint64(hcw.n), time.Since(beginTransfer))
+		rate := formatByteRate(uint64(hcw.n), time.Since(beginTransfer))
 
 		logger := log.With(s.logger, "event", "fetched", "oid", oid, "took", time.Since(begin), "downloaded", fmt.Sprintf("%d/%d", hcw.n, size), "rate", rate)
 		if err != nil {
@@ -468,4 +468,24 @@ func (hcw *hashCountWriter) Write(p []byte) (n int, err error) {
 	hcw.n += n
 	hcw.h.Write(p[:n])
 	return
+}
+
+func formatByteRate(s uint64, d time.Duration) string {
+	const (
+		unit     = 1000
+		prefixes = "KMGTPE"
+	)
+
+	b := uint64(float64(s) / math.Max(time.Nanosecond.Seconds(), d.Seconds()))
+	if b < unit {
+		return fmt.Sprintf("%d B/s", b)
+	}
+
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.1f %cB/s", float64(b)/float64(div), prefixes[exp])
 }

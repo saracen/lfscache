@@ -423,6 +423,21 @@ func (s *Server) fetch(w io.Writer, oid, url string, size int, header http.Heade
 	}
 
 	req.Header = header
+
+	// Github put the AuthInfo in url params, so there is no problem when redirect like 301
+	// But in some other case, AuthInfo send in Header, we need to remain Header when there is a redirect
+	s.client = &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// remain default policy
+			if len(via) >= 10 {
+				return errors.New("stopped after 10 redirects")
+			}
+
+			// remain header
+			req.Header = header
+			return nil
+		}}
+
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return err

@@ -42,7 +42,8 @@ type BatchObjectResponse struct {
 	OID           string                                `json:"oid"`
 	Size          int64                                 `json:"size"`
 	Authenticated bool                                  `json:"authenticated,omitempty"`
-	Actions       map[string]*BatchObjectActionResponse `json:"actions"`
+	Links         map[string]*BatchObjectActionResponse `json:"_links,omitempty"`
+	Actions       map[string]*BatchObjectActionResponse `json:"actions,omitempty"`
 }
 
 // BatchObjectActionResponse is the action item of a BatchObjectResponse
@@ -195,6 +196,49 @@ func (s *Server) proxy() *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{Director: director, ErrorHandler: errorHandler}
 }
 
+func modifyResponse(s *Server, object *BatchObjectResponse, actions map[string]*BatchObjectActionResponse, r *http.Response) {
+	for operation, action := range actions {
+		if operation != "download" && s.cache != nil {
+			continue
+		}
+
+		if action.Header == nil {
+			action.Header = make(map[string]string)
+		}
+
+		host, ok := r.Request.Context().Value(contextKeyOriginalHost).(*originalHost)
+		if !ok {
+			panic("lfscache error: original host information not set")
+		}
+
+		list := make([]string, 0, len(action.Header))
+		for header := range action.Header {
+			list = append(list, header)
+		}
+
+		scheme := "http"
+		if !host.http {
+			scheme = "https"
+		}
+
+		action.Header[UpstreamHeaderList] = strings.Join(list, ";")
+		action.Header[OriginalHrefHeader] = action.Href
+		action.Header[SizeHeader] = strconv.Itoa(int(object.Size))
+		action.Href = s.ObjectBatchActionURLRewriter(&url.URL{
+			Scheme: scheme,
+			Host:   host.host,
+			Path:   ContentCachePathPrefix + object.OID,
+		}).String()
+
+		mac := hmac.New(sha256.New, s.hmacKey[:])
+		mac.Write([]byte(action.Header[UpstreamHeaderList]))
+		mac.Write([]byte(action.Header[OriginalHrefHeader]))
+		mac.Write([]byte(action.Header[SizeHeader]))
+
+		action.Header[SignatureHeader] = hex.EncodeToString(mac.Sum(nil))
+	}
+}
+
 func (s *Server) batch() *httputil.ReverseProxy {
 	proxy := s.proxy()
 	proxy.ModifyResponse = func(r *http.Response) error {
@@ -224,45 +268,8 @@ func (s *Server) batch() *httputil.ReverseProxy {
 
 		// modify batch request urls
 		for _, object := range br.Objects {
-			for operation, action := range object.Actions {
-				if operation != "download" && s.cache != nil {
-					continue
-				}
-				if action.Header == nil {
-					action.Header = make(map[string]string)
-				}
-
-				host, ok := r.Request.Context().Value(contextKeyOriginalHost).(*originalHost)
-				if !ok {
-					panic("lfscache error: original host information not set")
-				}
-
-				list := make([]string, 0, len(action.Header))
-				for header := range action.Header {
-					list = append(list, header)
-				}
-
-				scheme := "http"
-				if !host.http {
-					scheme = "https"
-				}
-
-				action.Header[UpstreamHeaderList] = strings.Join(list, ";")
-				action.Header[OriginalHrefHeader] = action.Href
-				action.Header[SizeHeader] = strconv.Itoa(int(object.Size))
-				action.Href = s.ObjectBatchActionURLRewriter(&url.URL{
-					Scheme: scheme,
-					Host:   host.host,
-					Path:   ContentCachePathPrefix + object.OID,
-				}).String()
-
-				mac := hmac.New(sha256.New, s.hmacKey[:])
-				mac.Write([]byte(action.Header[UpstreamHeaderList]))
-				mac.Write([]byte(action.Header[OriginalHrefHeader]))
-				mac.Write([]byte(action.Header[SizeHeader]))
-
-				action.Header[SignatureHeader] = hex.EncodeToString(mac.Sum(nil))
-			}
+			modifyResponse(s, object, object.Actions, r)
+			modifyResponse(s, object, object.Links, r)
 		}
 
 		return s.batchResponse(&br, compress, r)

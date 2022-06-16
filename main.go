@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/saracen/lfscache/server"
+	"github.com/tgorol/lfscache/server"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"

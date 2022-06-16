@@ -11,9 +11,9 @@ builds:
     - arm64
 dockers:
 - image_templates:
-    - 'saracen/lfscache:{{ .Tag }}'
-    - 'saracen/lfscache:v{{ .Major }}.{{ .Minor }}'
-    - 'saracen/lfscache:latest'
+    - 'tgorol/lfscache:{{ .Tag }}'
+    - 'tgorol/lfscache:v{{ .Major }}.{{ .Minor }}'
+    - 'tgorol/lfscache:latest'
 archives:
 - format_overrides:
   - goos: windows

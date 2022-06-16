@@ -7,12 +7,12 @@ lfs-cache is a caching proxy for [Git LFS](https://git-lfs.github.com/) servers.
 #### Docker
 
 ```
-$ docker run --name lfscache --rm -d -v /my/cache/dir/lfs:/lfs saracen/lfscache:latest --url github.com/org/repo.git/info/lfs --http-addr :80  --directory /lfs
+$ docker run --name lfscache --rm -d -v /my/cache/dir/lfs:/lfs tgorol/lfscache:latest --url github.com/org/repo.git/info/lfs --http-addr :80  --directory /lfs
 ```
 
 #### Binary
 
-Download the correct [binary](https://github.com/saracen/lfscache/releases) for your system.
+Download the correct [binary](https://github.com/tgorol/lfscache/releases) for your system.
 
 ```
 $ ./lfscache --url github.com/org/repo.git/info/lfs --directory /my/cache/dir/lfs --http-addr=:9876

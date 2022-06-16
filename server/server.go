@@ -26,7 +26,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/saracen/lfscache/cache"
+	"github.com/tgorol/lfscache/cache"
 )
 
 // BatchResponse represents a batch response payload.

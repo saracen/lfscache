@@ -1,4 +1,4 @@
-module github.com/saracen/lfscache
+module github.com/tgorol/lfscache
 
 go 1.14
 

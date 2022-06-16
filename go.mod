@@ -1,6 +1,6 @@
 module github.com/tgorol/lfscache
 
-go 1.14
+go 1.18
 
 require (
 	github.com/go-kit/kit v0.10.0

@@ -1,8 +1,9 @@
 FROM golang:1.18 as builder
 
-WORKDIR /go
-RUN GOOS=linux GOARCH=386 GOPATH=/go go install -v github.com/tgorol/lfscache@v0.1.5
+ARG VERSION=latest
 
+WORKDIR /go
+RUN GOOS=linux GOARCH=386 GOPATH=/go go install -v github.com/tgorol/lfscache@${VERSION}
 
 FROM alpine:latest
 

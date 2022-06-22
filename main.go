@@ -30,6 +30,8 @@ func main() {
 		tlsCert      = flag.String("tls-cert", "", "HTTPS TLS certificate filepath")
 		lfsServerURL = flag.String("url", "", "LFS server URL")
 		directory    = flag.String("directory", "./objects", "cache directory")
+		tlsTimeout    = flag.Int("tlsTimeout", 30, "TLS handshake timeout in seconds")
+		dialTimeout    = flag.Int("dialTimeout", 30, "Initiate HTTP connection timeout in seconds")
 		printVersion = flag.Bool("v", false, "print version")
 	)
 
@@ -56,7 +58,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	s, err := server.New(logger, addr.String(), *directory)
+	s, err := server.New(logger, addr.String(), *directory, tlsTimeout, dialTimeout)
 	if err != nil {
 		panic(err)
 	}

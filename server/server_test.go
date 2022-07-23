@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -47,9 +48,25 @@ func server() (*httptest.Server, *Server, string, error) {
 		return ts, nil, dir, err
 	}
 
-	s, err := New(log.NewNopLogger(), ts.URL, dir)
+	s, err := New(log.NewNopLogger(), ts.URL, dir, nil)
 
 	return ts, s, dir, err
+}
+
+func TestHmac(t *testing.T) {
+	var hmac [64]byte
+	_, err := rand.Read(hmac[:])
+	require.NoError(t, err)
+
+	s, err := New(log.NewNopLogger(), "http://example.com", "", hmac[:])
+	require.NoError(t, err)
+	assert.Equal(t, s.hmacKey, hmac)
+}
+
+func TestNoHmac(t *testing.T) {
+	s, err := New(log.NewNopLogger(), "http://example.com", "", nil)
+	require.NoError(t, err)
+	assert.NotEmpty(t, s.hmacKey)
 }
 
 func TestProxy(t *testing.T) {

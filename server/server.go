@@ -98,16 +98,16 @@ type Server struct {
 }
 
 // New returns a new LFS proxy caching server.
-func New(logger log.Logger, upstream, directory string) (*Server, error) {
-	return newServer(logger, upstream, directory, true)
+func New(logger log.Logger, upstream, directory string, hmacKey []byte) (*Server, error) {
+	return newServer(logger, upstream, directory, true, hmacKey)
 }
 
 // NewNoCache returns a new LFS proxy server, with no caching.
 func NewNoCache(logger log.Logger, upstream string) (*Server, error) {
-	return newServer(logger, upstream, "", false)
+	return newServer(logger, upstream, "", false, nil)
 }
 
-func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool) (*Server, error) {
+func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool, hmacKey []byte) (*Server, error) {
 	var fs *cache.FilesystemCache
 	var err error
 	if cacheEnabled {
@@ -135,10 +135,14 @@ func newServer(logger log.Logger, upstream, directory string, cacheEnabled bool)
 		ObjectBatchActionURLRewriter: DefaultObjectBatchActionURLRewriter,
 	}
 
-	_, err = rand.Read(s.hmacKey[:])
-	if err != nil {
-		return nil, err
-	}
+        if hmacKey != nil {
+		copy(s.hmacKey[:], hmacKey)
+        } else {
+		_, err = rand.Read(s.hmacKey[:])
+		if err != nil {
+			return nil, err
+		}
+        }
 
 	if s.upstream, err = url.Parse(upstream); err != nil {
 		return nil, err

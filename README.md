@@ -33,3 +33,13 @@ git config lfs.url http://localhost:9876/
 # you can confirm the Endpoint that will be used by running
 git lfs env | grep Endpoint
 ```
+
+When running multiple instances of lfscache, you must use a shared hmac key so
+signatures from one instance can be verified by the others with a shared key.
+This key is not used for storage, so it's safe to rotate the key and restart all
+instances.
+
+```
+dd if=/dev/urandom bs=1 count=64 > hmac-key
+$ ./lfscache --hmac-key-file hmac-key ...
+```

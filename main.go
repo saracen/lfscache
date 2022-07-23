@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,6 +31,7 @@ func main() {
 		tlsCert      = flag.String("tls-cert", "", "HTTPS TLS certificate filepath")
 		lfsServerURL = flag.String("url", "", "LFS server URL")
 		directory    = flag.String("directory", "./objects", "cache directory")
+		hmacKeyFile  = flag.String("hmac-key-file", "", "file containing 64 byte HMAC key for request signing")
 		printVersion = flag.Bool("v", false, "print version")
 	)
 
@@ -56,7 +58,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	s, err := server.New(logger, addr.String(), *directory)
+	var hmacKey []byte = nil
+	if *hmacKeyFile != "" {
+		hmac, err := ioutil.ReadFile(*hmacKeyFile)
+		if err != nil {
+			level.Error(logger).Log("err", err)
+			os.Exit(1)
+		}
+		hmacKey = hmac
+	}
+
+
+	s, err := server.New(logger, addr.String(), *directory, hmacKey)
 	if err != nil {
 		panic(err)
 	}
